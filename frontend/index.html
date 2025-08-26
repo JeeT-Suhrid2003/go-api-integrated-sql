@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Book Management</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { color: #333; }
+    .book { border: 1px solid #ccc; padding: 10px; margin: 5px 0; border-radius: 5px; }
+    .actions button { margin-right: 5px; }
+    .form input { margin: 5px; }
+    .section { margin-top: 20px; padding: 10px; border: 1px solid #eee; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h1>� Book Management</h1>
+
+  <!-- Show all books -->
+  <div class="section">
+    <h2>All Books</h2>
+    <div id="book-list"></div>
+    <button onclick="fetchBooks()">� Refresh</button>
+  </div>
+
+  <!-- Add new book -->
+  <div class="section">
+    <h2>➕ Add New Book</h2>
+    <div class="form">
+      <input type="text" id="id" placeholder="ID">
+      <input type="text" id="title" placeholder="Title">
+      <input type="text" id="author" placeholder="Author">
+      <input type="number" id="quantity" placeholder="Quantity">
+      <button onclick="addBook()">Add</button>
+    </div>
+  </div>
+
+  <!-- Search book by ID -->
+  <div class="section">
+    <h2>� Search Book by ID</h2>
+    <div class="form">
+      <input type="text" id="searchId" placeholder="Enter Book ID">
+      <button onclick="searchBook()">Search</button>
+    </div>
+    <div id="search-result"></div>
+  </div>
+
+  <script>
+    const API = "http://localhost:8080";
+
+    // Fetch all books
+    async function fetchBooks() {
+      const res = await fetch(`${API}/books`);
+      const books = await res.json();
+      const container = document.getElementById("book-list");
+      container.innerHTML = "";
+      books.forEach(book => {
+        const div = document.createElement("div");
+        div.className = "book";
+        div.innerHTML = `
+          <strong>${book.title}</strong> by ${book.author} <br>
+          Quantity: ${book.quantity}
+          <div class="actions">
+            <button onclick="checkoutBook('${book.id}')">Checkout</button>
+            <button onclick="returnBook('${book.id}')">Return</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // Add new book
+    async function addBook() {
+      const book = {
+        id: document.getElementById("id").value,
+        title: document.getElementById("title").value,
+        author: document.getElementById("author").value,
+        quantity: parseInt(document.getElementById("quantity").value)
+      };
+      await fetch(`${API}/books`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(book)
+      });
+      fetchBooks();
+    }
+
+    // Checkout book
+    async function checkoutBook(id) {
+      await fetch(`${API}/checkout?id=${id}`, { method: "PATCH" });
+      fetchBooks();
+    }
+
+    // Return book
+    async function returnBook(id) {
+      await fetch(`${API}/return?id=${id}`, { method: "PATCH" });
+      fetchBooks();
+    }
+
+    // Search book by ID
+    async function searchBook() {
+      const id = document.getElementById("searchId").value;
+      const resultDiv = document.getElementById("search-result");
+      try {
+        const res = await fetch(`${API}/books/${id}`);
+        if (!res.ok) {
+          resultDiv.innerHTML = `<p style="color:red;">Book not found!</p>`;
+          return;
+        }
+        const book = await res.json();
+        resultDiv.innerHTML = `
+          <div class="book">
+            <strong>${book.title}</strong> by ${book.author} <br>
+            Quantity: ${book.quantity}
+            <div class="actions">
+              <button onclick="checkoutBook('${book.id}')">Checkout</button>
+              <button onclick="returnBook('${book.id}')">Return</button>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        resultDiv.innerHTML = `<p style="color:red;">Error fetching book</p>`;
+      }
+    }
+
+    // Load books on startup
+    fetchBooks();
+  </script>
+</body>
+</html>
